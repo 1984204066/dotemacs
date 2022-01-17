@@ -8,6 +8,16 @@
 (setq package-archives '(("gnu"   . "http://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
 			 ("org" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/org/")
 			 ("melpa" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
+					;(setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
+					;                         ("marmalade" . "http://marmalade-repo.org/packages/")
+					;                         ("melpa" . "http://melpa.milkbox.net/packages/")))
+;; https://emacs.stackexchange.com/questions/57596/getting-started-use-package-question#:~:text=If%20your%20version%20of%20Emacs%20%28M-x%20emacs-version%20RET%29,will%20effectively%20be%20called%20before%20user-init-file%20is%20loaded.
+;; Also, since Emacs 27.1 "it is no longer necessary to call 'package-initialize' in your init file". Therefore, you should be able to safely remove (package-initialize) call or use it conditionally, such as:
+;; (when (< emacs-major-version 27)
+;;   (package-initialize))
+
+;;https://emacs-china.org/t/topic/4088/3
+;; 比较确定的是，在使用 package- 系列函数（例如 (package-install 'dash)) 之前必需调用 (package-initialize)。
 ;; 有package.el的Emacs都不需要手动添加(package-initialize) Emacs启动的时候会自动运行的
 (unless package--initialized (package-initialize t)) ;;(package-initialize)
 ;; https://segmentfault.com/a/1190000039902535
@@ -19,11 +29,11 @@
 (require 'use-package-ensure)
 
 (eval-and-compile
-    (setq use-package-always-ensure t) ;不用每个包都手动添加:ensure t关键字
-    (setq use-package-always-defer t) ;默认都是延迟加载，不用每个包都手动添加:defer t
-    (setq use-package-always-demand nil)
-    (setq use-package-expand-minimally t)
-    (setq use-package-verbose t))
+  (setq use-package-always-ensure t) ;不用每个包都手动添加:ensure t关键字
+  (setq use-package-always-defer t) ;默认都是延迟加载，不用每个包都手动添加:defer t
+  (setq use-package-always-demand nil)
+  (setq use-package-expand-minimally t)
+  (setq use-package-verbose t))
 
 (defconst *is-mac* (eq system-type 'darwin))
 (defconst *is-linux* (eq system-type 'gnu/linux))
@@ -32,16 +42,6 @@
 (use-package benchmark-init
   :init (benchmark-init/activate)
   :hook (after-init . benchmark-init/deactivate))
-
-(use-package init-themes
-  :load-path "./lisp"
-  :hook (after-init . init-themes)
-  )
-
-;; 在VSCode或Jetbrains家族的编辑器中，上下移动行/块是非常容易的
-(use-package drag-stuff
-  :bind (("<M-up>" . drag-stuff-up)
-         ("<M-down>" . drag-stuff-down)))
 
 (use-package emacs
   :init
@@ -64,10 +64,7 @@
   ;;(fset 'yes-or-no-p'y-or-n-p)
   (defalias 'yes-or-no-p 'y-or-n-p)
 
-  (use-package init-parens
-    :demand
-    :load-path "./lisp"
-    )
+  (use-package init-parens :demand :load-path "./lisp")
   ;;功能稍微好用于NumberedWindows http://nschum.de/src/emacs/window-numbering-mode/
   (use-package window-numbering :defer 1
     :config
@@ -77,8 +74,7 @@
 	   ("<C-M-S-left>" . shrink-window-horizontally)
 	   ("<C-M-S-right>" . enlarge-window-horizontally)
 	   ("<C-M-S-down>" . shrink-window)
-	   ("<C-M-S-up>" . enlarge-window))
-    )
+	   ("<C-M-S-up>" . enlarge-window)))
 
   ;; replace global-set-key/global-unset-key
   :bind (
@@ -102,16 +98,34 @@
 	 ("C-s" . isearch-forward)
 	 ;; ("C-w" kill-region)
 	 ;; ([C-f7] . toggle-frame-maximized)
+	 ;;(global-set-key (kbd "C-<SPC>") 'forward-char)
 	 ("C-<SPC>" . forward-char)
 	 )
-  ;;(global-set-key (kbd "C-<SPC>") 'forward-char)
+  ;; :hook (before-save . delete-trailing-whitespace)
+  :config
   :unless *is-windows* ; 有些时候我发现在Windows上开启了行号会让屏幕滚动的时候闪烁
   :config
   (setq display-line-numbers-type 'relative) ;行号配置.从Emacs 26开始，自带了行号显示功能
   (global-display-line-numbers-mode t)
-
-  :hook (before-save . delete-trailing-whitespace)
+  (require 'init-cnfont)
   )
+(use-package nhexl-mode)
+
+(require 'init-org-git)
+
+(use-package init-themes
+  :load-path "./lisp"
+  :hook (after-init . init-themes))
+
+;; 在VSCode或Jetbrains家族的编辑器中，上下移动行/块是非常容易的
+(use-package drag-stuff
+  :bind (("<M-up>" . drag-stuff-up)
+         ("<M-down>" . drag-stuff-down)))
+
+;; (eval-after-load 'eshell
+;;   '(remove-hook 'before-save-hook 'delete-trailing-whitespace) )
+;; (eval-after-load 'markdown
+;;   '(remove-hook 'before-save-hook 'delete-trailing-whitespace) )
 
 (add-hook 'js-mode-hook (lambda()(interactive)
 			  (setq tab-width 4
@@ -120,13 +134,16 @@
 			  ))
 (use-package helm  ;; helm保证要安装上的，否则M-x没法用。
   :bind (
-     ([remap execute-extended-command] . helm-M-x)
-     ([remap find-file]. helm-find-files)
-     ([remap switch-to-buffer] . helm-mini) ;; helm-buffers-list
-     ([M-f7] . maximize-window)
-     ("M-f" . helm-recentf)))
-(use-package helm-lsp)
-(use-package helm-xref)
+	 ([remap execute-extended-command] . helm-M-x)
+	 ([remap find-file]. helm-find-files)
+	 ([remap switch-to-buffer] . helm-mini) ;; helm-buffers-list
+	 ([M-f7] . maximize-window)
+	 ("M-f" . helm-recentf))
+  :config
+  (use-package helm-lsp :demand)
+  (use-package helm-xref :demand)
+  )
+
 
 (use-package which-key
   :defer nil
@@ -142,7 +159,6 @@
   :mode ("\\.html?\\'" "\\.phtml\\'" ))
 ;; https://robert.kra.hn/posts/2021-02-07_rust-with-emacs/
 (use-package rustic
-  :ensure
   :bind (:map rustic-mode-map
               ("M-j" . lsp-ui-imenu)
               ("M-?" . lsp-find-references)
@@ -158,13 +174,16 @@
   ;; (setq lsp-enable-symbol-highlighting nil)
   ;; (setq lsp-signature-auto-activate nil)
 
-  ;; comment to disable rustfmt on save
-  ;; (setq rustic-format-on-save t)
+  ;; comment to disable rustfmt on save ;;need rustfmt.toml edition=2021
+  (setq rustic-format-on-save t)
+  ;; :hook (before-save . delete-trailing-whitespace)
   :hook (rustic-mode . rk/rustic-mode-hook))
 
+;; https://github.com/brotzeit/rustic/issues/253
 (defun rk/rustic-mode-hook ()
   ;; so that run C-c C-c C-r works without having to confirm
-  (setq-local buffer-save-without-query t))
+    (if buffer-file-name
+        (setq-local buffer-save-without-query t)))
 
 (use-package lsp-mode
   :commands lsp
@@ -190,10 +209,10 @@
   ;; (company-begin-commands nil) ;; uncomment to disable popup
   :bind
   (:map company-active-map
-	      ("C-n". company-select-next)
-	      ("C-p". company-select-previous)
-	      ("M-<". company-select-first)
-	      ("M->". company-select-last))
+	("C-n". company-select-next)
+	("C-p". company-select-previous)
+	("M-<". company-select-first)
+	("M->". company-select-last))
   (:map company-mode-map
 	("<tab>". tab-indent-or-complete)
 	("TAB". tab-indent-or-complete)))
@@ -234,12 +253,11 @@
   :config (require 'yasnippet))
 
 (use-package flycheck
- ;; :hook (prog-mode . flycheck-mode) ;;如果你只想在编程语言的模式下启用
+  ;; :hook (prog-mode . flycheck-mode) ;;如果你只想在编程语言的模式下启用
   :hook (after-init . global-flycheck-mode) ;; 建议全局启用
   )
 
 (use-package exec-path-from-shell
-  :ensure
   :init (exec-path-from-shell-initialize))
 
 (use-package dap-ui
@@ -264,6 +282,15 @@
 	 :gdbpath "rust-lldb"
          :target nil
          :cwd nil)))
+
+;; (use-package astyle
+;;   :load-path "./lisp/astyle"
+;;   :when (executable-find "astyle")
+;;   :init (use-package reformatter)
+;;   :hook (c-mode-common . astyle-on-save-mode))
+(use-package format-all
+  :demand
+  :load-path "./lisp/format-all-the-code")
 
 (use-package init-cc-mode
   :load-path "./lisp")
