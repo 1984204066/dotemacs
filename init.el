@@ -133,10 +133,20 @@
 	 ([remap find-file]. helm-find-files)
 	 ([remap switch-to-buffer] . helm-mini) ;; helm-buffers-list
 	 ([M-f7] . maximize-window)
-	 ("M-f" . helm-recentf))
+	 ;; https://emacs.stackexchange.com/questions/33727/how-does-spacemacs-allow-tab-completion-in-helm
+	 ("M-f" . helm-recentf)
+	 )
+	 (:map helm-map
+	       ("<tab>" . helm-execute-persistent-action)
+	       ("TAB" . helm-execute-persistent-action)
+	       ("C-z" . helm-select-action)
+	       )
   :config
   (use-package helm-lsp :demand)
-  (use-package helm-xref :demand)
+  ;; https://zhuanlan.zhihu.com/p/31672451
+  (use-package helm-xref :demand
+    :config
+    (setq xref-show-xrefs-function 'helm-xref-show-xrefs))
   )
 
 ;; 用于快捷键提示
